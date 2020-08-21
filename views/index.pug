@@ -1,0 +1,17 @@
+html
+  head
+    title Editor
+    |<link rel="stylesheet" href="//unpkg.com/grapesjs/dist/css/grapes.min.css">
+    |<script src="//unpkg.com/grapesjs"></script>
+  body
+    div#gjs
+        |!{content}
+    script.
+        const editor = grapesjs.init({
+        container: "#gjs",
+        fromElement: true,
+        height: '300px',
+        width: 'auto',
+        storageManager: false,
+        panels: { defaults: [] },
+      });
