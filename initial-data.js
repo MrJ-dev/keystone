@@ -3,6 +3,7 @@ const randomString = () => crypto.randomBytes(6).hexSlice();
 
 module.exports = async keystone => {
   // Count existing users
+  // console.log("keystineoen", keystone);s
   const {
     data: {
       _allUsersMeta: { count },

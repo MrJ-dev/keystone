@@ -11,8 +11,8 @@ const adapterConfig = { mongoUri: 'mongodb://localhost:27017/ksp' };
 const Stars = require('./Stars');
 const ksGrape = require('./ks-grapejs');
 const inputCustom = require('./Input-custom')
-const path = require('path');
 const express = require('express')
+
 
 
 const keystone = new Keystone({
@@ -72,7 +72,9 @@ keystone.createList('User', {
 keystone.createList('Page', {
   fields: {
     name: { type: Text },
-    content: { type: inputCustom },
+    content: {
+      type: inputCustom, adminConfig: { "filePath": "./files", "css": [] }
+    },
   },
   // List-level access controls
   access: {
@@ -120,35 +122,8 @@ const authStrategy = keystone.createAuthStrategy({
   list: 'User',
 });
 
-module.exports = {
-  configureExpress: app => {
-    // console.log(app)
-    app.set('view engine', 'pug');
-    app.use(express.static(__dirname + '/public'));
-    app.set('views', path.join(__dirname, 'views'));
-    app.get('/abc', async function (req, res) {
 
-      const id = req.query.id;
-      const pageWhereUniqueInput = { id }
-      if (id) {
-        const {
-          data: {
-            Page: { content },
-          },
-        } = await keystone.executeGraphQL({
-          context: keystone.createContext({ skipAccessControl: true }),
-          query: `query($where:PageWhereUniqueInput!){
-          Page(where:$where){
-                content
-            }
-        }`,
-          variables: { where: pageWhereUniqueInput }
-        })
-        // console.log(content)
-        res.render(path.join(__dirname + '/views/index'), { content: content })
-      }
-    })
-  },
+module.exports = {
   keystone,
   apps: [
     new GraphQLApp(),
@@ -157,5 +132,6 @@ module.exports = {
       enableDefaultRoute: true,
       authStrategy,
     }),
+    // new CustomApp()
   ],
 };

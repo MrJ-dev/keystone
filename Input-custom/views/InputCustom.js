@@ -3,19 +3,11 @@
 import { jsx } from '@emotion/core';
 import GrapesJSEditor from './editor/Editor';
 
-;
-function openModal(htmlPage, id) {
-    window.location.href = "/abc?id=" + id
-    // console.log("id", id)
-}
 
-
-const InputCustom = ({ onChange, value, id }) => {
+const InputCustom = ({ onChange, value, id, closeEditor }) => {
     // console.log("id", id)
     return (
-        <div>
-            <GrapesJSEditor value={value} onChange={onChange} id={id}></GrapesJSEditor>
-        </div>
+        <GrapesJSEditor value={value} onChange={onChange} id={id} closeEditor={closeEditor}></GrapesJSEditor>
     )
 }
 

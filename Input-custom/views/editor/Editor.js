@@ -1,119 +1,158 @@
 import 'grapesjs/dist/css/grapes.min.css';
-import grapesjs from 'grapesjs';
-import React, { useEffect, useState } from 'react';
+import { Editor } from 'grapesjs-react'
+import React, { useEffect, useState, useRef } from 'react';
+import './index.css'
 import { v4 as uuidv4 } from 'uuid';
+import CodeEditor from './CodeEditor';
+
 
 const UUID = uuidv4();
-const Editor = (props) => {
 
-  const [state, setstate] = useState({});
-  // console.log("value", props)
+export default function GrapeJsEditor(props) {
+
+  const editorRef = useRef();
+  const storageManager = {
+    id: UUID + "_",
+    type: 'local',
+    autosave: true,
+    autoload: false,
+    stepsBeforeSave: 1,
+  }
+
+  const [landingPage, setLandingPage] = useState({
+    html: `<div></div>`,
+    css: null,
+    components: null,
+    styles: null,
+    assets: null
+  });
+
+  const [isShowingCodeEditor, setIsShowingCodeEditor] = useState(false)
+
+
+  function initialiseEditor(editor) {
+
+    editor.setComponents(landingPage.html);
+    editor.setStyle(landingPage.css)
+    // editor.AssetManager = AssetManager;
+    // console.log("editor", editor.AssetManager.getConfig())
+    let config = editor.AssetManager.getConfig();
+    config.upload = 'http://localhost:3000/upload-image';
+    config.uploadName = 'files';
+    config.uploadFile = function (e) {
+      var files = e.dataTransfer ? e.dataTransfer.files : e.target.files;
+      var formData = new FormData();
+      console.log(files)
+
+      for (var i in files) {
+        formData.append('file', files[i])
+      }
+
+      fetch('http://localhost:3000/upload-image', {
+        method: 'POST',
+        body: formData,
+
+      }).then(async (res) => {
+        console.log(res)
+        let files = await res.json();
+        console.log("files", files)
+        files = files.map(item => item.path);
+        editor.AssetManager.add(files);
+      }).catch(err => {
+        console.log(err);
+      })
+    }
+    config.stylePrefix = "am-"
+    config.embedAsBase64 = 0;
+    editor.AssetManager.init(config)
+  }
 
   useEffect(() => {
     const value = props.value;
-    const LandingPage = !props.value ? {
-      html: `<div></div>`,
-      css: null,
-      components: null,
-      styles: null,
-      assets: null
-    } : {
-        html: value["html"],
-        css: value["css"],
-        assets: JSON.parse(value["assets"]),
-        styles: JSON.parse(value["styles"]),
-        components: JSON.parse(value["components"])
-      }
 
-    const editor = grapesjs.init({
-      container: `#${"gjs"}`,
-      // fromElement: true,
-      height: '300px',
-      width: 'auto',
-      panels: {},
-      blockManager: {
-        appendTo: '#blocks',
-        blocks: [
-          {
-            id: 'section', // id is mandatory
-            label: '<b>Section</b>', // You can use HTML/SVG inside labels
-            attributes: { class: 'gjs-block-section' },
-            content: `<section>
-          <h1>This is a simple title</h1>
-          <div>This is just a Lorem text: Lorem ipsum dolor sit amet</div>
-        </section>`,
-          }, {
-            id: 'text',
-            label: 'Text',
-            content: '<div data-gjs-type="text">Insert your text here</div>',
-          }, {
-            id: 'image',
-            label: 'Image',
-            select: true,
-            content: { type: 'image' },
-            activate: true,
-          }
-        ]
-      },
-      storageManager: {
-        id: UUID + "_",
-        type: 'local',
-        autosave: true,
+    if (value && Object.keys(value).length > 0) {
 
-        autoload: false,
-        stepsBeforeSave: 0,
-      },
-      components: (LandingPage.components) || LandingPage.html,
-      style: LandingPage.styles || LandingPage.css,
-      assets: LandingPage.assets
+      setLandingPage(state => {
+        let newLandingPage = state;
+        newLandingPage.html = value["html"];
+        newLandingPage.css = value['css'];
+        newLandingPage.assets = JSON.parse(value["assets"]);
+        newLandingPage.styles = JSON.parse(value["styles"]);
+        newLandingPage.components = JSON.parse(value["components"]);
+        return { ...newLandingPage }
+      })
+    }
+  }, [props.value]);
 
-      // style: props.id ? props.value[props.id + "-style"] || props.value[props.id + "-css"] : {},
-
-    });
-
-    setstate({ ...state, editor: editor })
-
-    // editor.StorageManager.add('local', {
-    //   store(data, clb, clbErr) {
-    //     localStorage.setItem('gjs-item')
-    //   }
-    // })
-
-    editor.on('storage:end', e => {
-      // console.log(e)
-      const myJson = {}
-      let re = new RegExp(UUID, 'g')
-      setJsonFromLocalStorage(myJson, re);
-      props.onChange(myJson)
-    })
-
-  }, [props.id]);
+  function handleChanges() {
+    const myJson = {}
+    let re = new RegExp(UUID, 'g')
+    setJsonFromLocalStorage(myJson, re);
+    props.onChange(myJson)
+    props.closeEditor()
+  }
 
   const setJsonFromLocalStorage = (myJson, re) => {
     for (const item of Object.keys(localStorage)) {
       if (item.match(re)) {
         myJson[item.split("_")[1]] = localStorage.getItem(item)
-        // localStorage.removeItem(item)
+        localStorage.removeItem(item)
       }
     }
   }
 
-  /**
-   * This method is used if we want info directly from editor
-   */
-  function getEditorInfo() {
-    console.log(state.editor?.getHtml());
-    console.log(state.editor?.getComponents())
-    // similarly for js, style,assets, css
+  function showCodeEditor() {
+    setIsShowingCodeEditor(true);
+  }
+  function closeCodeEditor() {
+    setIsShowingCodeEditor(false);
+  }
+
+  function updateLandingPageCss(css) {
+    setLandingPage(state => {
+      state['styles'] = { pStylePrefix: "gjs-", em: "" }
+      state['css'] = css;
+
+      return { ...state }
+    })
+  }
+
+  function updateLandingPageHtml(html) {
+    setLandingPage(state => {
+      state['html'] = html;
+      return { ...state }
+    })
   }
 
   return (
     <>
-      <div id={"gjs"}>
+      <div className="header">
+        {!isShowingCodeEditor ?
+          (
+            <>
+              <button type="button" className="btn" onClick={handleChanges}> Save </button>
+              <button type="button" className="btn" onClick={showCodeEditor}> Edit  </button>
+            </>
+          )
+          :
+          <button type="button" className="btn" onClick={closeCodeEditor}> Close Code Editor</button>
+        }
       </div>
-      <div id="blocks"></div>
+
+      {!isShowingCodeEditor ?
+        <Editor
+          ref={editorRef}
+          onInit={initialiseEditor}
+          id="gjs"
+          presetType="webpage"
+          storageManager={storageManager}
+          components={(landingPage.components) || landingPage.html}
+          styleManager={landingPage.styles || landingPage.css}
+        // assetsManager={assetsManager}
+        />
+        :
+        <CodeEditor updateLandingPageHtml={updateLandingPageHtml} updateLandingPageCss={updateLandingPageCss} uuid={UUID}></CodeEditor>
+      }
     </>
   );
 }
-
-export default Editor;
